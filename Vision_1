@@ -1,0 +1,597 @@
+import Ethian as Et
+import cv2
+import winsound
+import DobotDllType as dType
+import time
+import serial
+import numpy as np
+import keras
+import skimage.filters as filters
+from matplotlib import pyplot as plt
+import time
+import os
+
+arduino=Et.crearSerial()
+Et.SerialClose(arduino)
+arduino=Et.crearSerial()
+Et.apagar_luz(arduino)
+Et.SerialClose(arduino)
+i = 0
+
+clear = lambda: os.system('clc')
+clear()
+
+modelo_numero_de_parte = keras.models.load_model('CNN_IMPELLERS_20.h7')
+model2 = keras.models.load_model('modelosmodelo_MX60LT8W93TC2_LETRAS_40x40_Acc_968_T_10-09-2019-18-24-13.model') 
+
+try: 
+    
+    cap_auto=Et.crear_camara_auto()
+    cap_noenfoque=Et.crear_camara_noenfoque()
+    api,estado_conexion_robot=Et.conectar_robot()
+    Et.setup_robot(api)
+    arduino=Et.crearSerial()
+    Et.prender_luz(arduino)
+    Et.posicion_escaneo(api)
+  
+except:
+    
+    clear = lambda: os.system('clc')
+    clear()
+    print("Ocurrio un error en el SETUP")
+
+
+
+while True:
+               
+    _, frame = cap_auto.read()
+    
+    if i < 10:
+        
+        Et.Prueba(cap_auto,modelo_numero_de_parte)
+        
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            Et.desconectar_robot(api)
+            Et.apagar_luz(arduino)
+            Et.SerialClose(arduino)
+            clear = lambda: os.system('clc')
+            clear()
+            break
+        
+        i = i + 1
+        
+        time.sleep(1)
+        
+        if i == 10:
+            
+            print(Et.Prueba(cap_auto,modelo_numero_de_parte))
+
+          
+            if (Et.Prueba(cap_auto,modelo_numero_de_parte)).item(0) == 1:
+                imagen_1 = cv2.imread('698192-4.jpg')
+                plt.imshow(imagen_1)
+                plt.show()
+                Et.posicion_pieza_698192_4(api)
+                
+                
+            if (Et.Prueba(cap_auto,modelo_numero_de_parte)).item(1) == 1:
+                imagen_2 = cv2.imread('303053-7.jpg')
+                plt.imshow(imagen_2)
+                plt.show()
+                Et.posicion_pieza_3033053_7(api)
+                _, frame_30353 = cap_noenfoque.read()
+                cv2.imshow('30353',frame_30353)
+                time.sleep(5)
+                Et.posicion_fin(api)
+                
+                
+            if (Et.Prueba(cap_auto,modelo_numero_de_parte)).item(2) == 1:
+                imagen_3 = cv2.imread('3033207-1jpg')
+                plt.imshow(imagen_3)
+                plt.show()
+                
+            if (Et.Prueba(cap_auto,modelo_numero_de_parte)).item(3) == 1:
+                imagen_4 = cv2.imread('3616967-1.jpg')
+                plt.imshow(imagen_4)
+                plt.show()
+                
+            if (Et.Prueba(cap_auto,modelo_numero_de_parte)).item(4) == 1:
+                imagen_5 = cv2.imread('3822249-4.jpg')
+                plt.imshow(imagen_5)
+                plt.show()
+                
+                
+            if (Et.Prueba(cap_auto,modelo_numero_de_parte)).item(5) == 1:
+                imagen_6 = cv2.imread('3822400-5.jpg')
+                plt.imshow(imagen_6)
+                plt.show()
+                Et.posicion_pieza_3822400_5(api)
+                Et.letras(cap_noenfoque,model2)
+                time.sleep(3)
+                Et.prender_mesa(arduino)
+                time.sleep(0.1)
+                Et.apagar_mesa(arduino)
+                Et.letras(cap_noenfoque,model2)
+                time.sleep(3)
+                Et.posicion_fin(api)
+                Et.apagar_luz(arduino)
+                Et.SerialClose(arduino)
+                
+                
+            if (Et.Prueba(cap_auto,modelo_numero_de_parte)).item(6) == 1:
+                imagen_7 = cv2.imread('3822523-003.jpg')
+                plt.imshow(imagen_7)
+                plt.show()
+                Et.posicion_pieza_3822523_003(api)
+                _, frame_3822523 = cap_noenfoque.read()
+                cv2.imshow('3822523-003',frame_3822523)
+                time.sleep(5)
+                Et.posicion_fin(api)
+                
+                
+            if (Et.Prueba(cap_auto,modelo_numero_de_parte)).item(7) == 1:
+                imagen_8 = cv2.imread('70721597-1.jpg')
+                plt.imshow(imagen_8)
+                plt.show()
+                
+            if (Et.Prueba(cap_auto,modelo_numero_de_parte)).item(8) == 1:
+                imagen_9 = cv2.imread('No sample detected.jpg')
+                plt.imshow(imagen_9)
+                plt.show()
+                Et.posicion_fin(api)
+                
+            if (Et.Prueba(cap_auto,modelo_numero_de_parte)).item(9) == 1:
+                imagen_10 = cv2.imread('LH70027-01.jpg')
+                plt.imshow(imagen_10)
+                plt.show()
+  
+    
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        Et.desconectar_robot(api)
+        Et.apagar_luz(arduino)
+        Et.SerialClose(arduino)
+        clear = lambda: os.system('clc')
+        clear()
+        break
+    
+cap_auto.release()
+cv2.destroyAllWindows()
+
+
+
+####################################################################################################################################
+import skimage.filters as filters
+import time
+import cv2
+import numpy as np
+import threading
+import DobotDllType as dType
+import keras
+from matplotlib import pyplot as plt 
+import serial
+import imutils
+
+ratiomin2=0.3
+ratiomax2=3
+excesoPixel=2
+min_size2 =27
+max_size2 = 500
+meanColormax2=150
+meanColormin2=10
+heightstop=40
+heightminimum=20
+confidence=0.1
+font2 = cv2.FONT_HERSHEY_DUPLEX 
+fontScale2 = 0.7
+fontColor2 = (50,255,50)
+lineType2  = 1   
+factordesviacion=3
+
+directorio={0:"-",1:"0",2:"1",3:"2",4:"3",5:"4",6:"5",7:"6",8:"7",9:"8",
+        10:"9",11:"A",12:"B",13:"@",14:"E",15:"F",16:"L",17:"M",18:"N",19:"P",20:"R",21:"S",22:"V"}
+
+
+def crear_camara_auto():
+    cap_1 = cv2.VideoCapture(0)
+    print('CAMARA DETECCION DE PIEZA CARGADA')
+    return cap_1
+
+
+def crear_camara_noenfoque():
+    cap_2 = cv2.VideoCapture(1)
+    print('CAMARA DE DETECCION DE LETRAS CARGADA')
+    return cap_2
+
+
+def detectar_pieza_keras(modelo_numero_de_parte,captura,directorio_PIEZA):
+    validacion=0
+    predictions = modelo_numero_de_parte.predict(captura)
+    piezaID=np.argmax(predictions)
+    nivel_certesa=directorio_PIEZA[piezaID]    
+    if piezaID!=0:
+        validacion=1        
+    return validacion,nivel_certesa,piezaID
+
+
+def vidcap_para_keras(cap_1):
+    _,image = cap_1.read()
+    tamanio=image.shape
+    image2=np.copy(image[:,50:tamanio[1],:])
+    resize = cv2.resize(image,(100,100))
+    matriz_pieza = resize.reshape(1,100,100,3)
+    return image2,matriz_pieza
+
+
+def Prueba(cap_1,modelo_numero_de_parte):
+    _,image = cap_1.read()
+    resize = cv2.resize(image,(100,100))
+    matriz_pieza = resize.reshape(1,100,100,3)
+    
+    if (modelo_numero_de_parte.predict(matriz_pieza)).item(0)==1:
+        print('Numero de parte: 698192-4')
+    if (modelo_numero_de_parte.predict(matriz_pieza)).item(1)==1:
+        print('Numero de parte: 3033053-7')
+    if (modelo_numero_de_parte.predict(matriz_pieza)).item(2)==1:
+        print('Numero de parte: 3033207-1')
+    if (modelo_numero_de_parte.predict(matriz_pieza)).item(3)==1:
+        print('Numero de parte: 3616967-1')
+    if (modelo_numero_de_parte.predict(matriz_pieza)).item(4)==1:
+        print('Numero de parte: 3822249-4')
+    if (modelo_numero_de_parte.predict(matriz_pieza)).item(5)==1:
+        print('Numero de parte: 3822400-5')
+    if (modelo_numero_de_parte.predict(matriz_pieza)).item(6)==1:
+        print('Numero de parte: 3822523-003')
+    if (modelo_numero_de_parte.predict(matriz_pieza)).item(7)==1:
+        print('Numero de parte: 70721597-1')
+    if (modelo_numero_de_parte.predict(matriz_pieza)).item(8)==1:
+        print('Numero de parte: NO HAY PIEZA')
+    if (modelo_numero_de_parte.predict(matriz_pieza)).item(9)==1:
+        print('Numero de parte: LH70027-01')
+        
+    
+        
+    return modelo_numero_de_parte.predict(matriz_pieza)
+    
+    
+def crearSerial():
+    ser = serial.Serial('COM4',9600,timeout=0)  
+    return ser
+
+
+def SerialClose(ser):
+    ser.close()  
+
+
+def conectar_robot():
+   
+    CON_STR = {
+    dType.DobotConnect.DobotConnect_NoError:  "DobotConnect_NoError",
+    dType.DobotConnect.DobotConnect_NotFound: "DobotConnect_NotFound",
+    dType.DobotConnect.DobotConnect_Occupied: "DobotConnect_Occupied"}   
+    api = dType.load() 
+    state = dType.ConnectDobot(api, "", 115200)[0]
+    
+    if (state==1)or(state==2):
+        dType.DisconnectDobot(api)
+        print('\nla conexion con el robot no fue satisfactoria, detenga el programa, por favor desconecte y conecte el dobot nuevamente y carge el programa otra vez ')
+    else:
+        print("Connect status:",CON_STR[state])
+    return api,state
+
+
+def desconectar_robot(api):
+    dType.DisconnectDobot(api)
+
+    
+def setup_robot(api):
+    
+    dType.SetQueuedCmdClear(api)
+
+    #HOME
+    dType.SetHOMEParams(api, 250, 0, 50, 0, isQueued = 1)
+    dType.SetPTPJointParams(api, 200, 200, 200, 200, 200, 200, 200, 200, isQueued = 1)
+    dType.SetPTPCoordinateParams(api,200,200,200,200,1)
+    dType.SetPTPCommonParams(api, 200, 200, isQueued = 1)
+    
+    dType.SetHOMECmd(api, temp = 0, isQueued = 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(17)
+
+    
+def posicion_escaneo(api):
+    
+    #POSICION ESCANEO
+    dType.SetPTPCmd(api, 2, 182.8803, (-188.8926), 13.6068, -45.9265, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(1.8)
+    
+    dType.SetPTPCmd(api, 4,(-45.9265), 40.0220, 37.6416, 0, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)   
+    time.sleep(1.8)
+     
+    dType.SetPTPCmd(api, 2, 10.4316, (-240.0585), 129.6408, -87.5118, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api) 
+    time.sleep(1.8)
+    
+    dType.SetPTPCmd(api, 4,(-87.5118), 14.4071, 0.4341, 0, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)  
+    time.sleep(1.8) 
+    
+
+    
+    
+def posicion_pieza_3822400_5(api):
+
+    print('entre')
+    dType.SetPTPCmd(api, 2, 137.1956, -281.6968, 5.4567, -64.0324, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(2)
+    dType.SetPTPCmd(api, 4,-64.0324, 61.6638, 23.5018, 0, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(2)
+    
+def posicion_pieza_3033053_7(api):
+
+    print('entre')
+    dType.SetPTPCmd(api, 2, 47.4579, -245.0907, -16.33, -113.6212, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(2)
+    dType.SetPTPCmd(api, 4,-79.0412, 44.7315, 49.7745, -34.58, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(2)
+    
+def posicion_pieza_698192_4(api):
+
+    print('entre')
+    dType.SetPTPCmd(api, 2, 35.3856, -195.2847, -110.0015, -146.4894, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(2)
+    dType.SetPTPCmd(api, 4,-79.7294, 74.2117, 86.5454, -66.76, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(2)
+    
+def posicion_pieza_3822523_003(api):
+
+    print('entre')
+    dType.SetPTPCmd(api, 2, 94.3117, -252.4066, -34.7197, -71.0518, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(2)
+    dType.SetPTPCmd(api, 4,-69.5118, 56.1575, 48.3862, -1.54, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(2)
+
+def posicion_fin(api):
+
+    print('entre')
+    dType.SetPTPCmd(api, 2, 27.1406, -156.3623, 36.0320, -80.1530, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(2)
+    dType.SetPTPCmd(api, 4,-80.1530, -4.2617, 42.1221, 0, 1)
+    dType.SetQueuedCmdStartExec(api)
+    dType.SetQueuedCmdStopExec(api)
+    time.sleep(2)
+    
+def prender_luz(ser):
+    
+    time.sleep(1)
+    ser.write('2'.encode('utf-8'))      
+    time.sleep(1)
+
+    
+def apagar_luz(ser):
+    
+    time.sleep(1)
+    ser.write('3'.encode('utf-8'))      
+    time.sleep(1)
+    
+def prender_mesa(ser):
+    
+    time.sleep(0.1)
+    ser.write('6'.encode('utf-8'))      
+    time.sleep(0.1)
+    
+
+def apagar_mesa(ser):
+    
+    time.sleep(0.1)
+    ser.write('5'.encode('utf-8'))      
+    time.sleep(0.1)
+       
+
+def letras(cap_2,model2):
+    
+     _, frame = cap_2.read()
+
+    
+     frame2=frame.copy()
+     gray=cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+     text_threshold = filters.threshold_local(gray,block_size=21, offset=10) 
+     gray[gray > text_threshold]=0
+     mascara=cv2.inRange(gray,1,255)#binarizador
+                
+
+     nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(mascara, connectivity=8)
+     sizes = stats[1:, -1]; 
+     nb_components = nb_components - 1
+    
+     img2 = np.zeros((output.shape))
+
+     for i in range(0, nb_components):
+         if sizes[i] >= min_size2  and sizes[i] <= max_size2:
+            img2[output == i + 1] = 255
+
+           
+     img2 = img2.astype(np.uint8)       
+    
+    
+     img2,ctrs,hier=cv2.findContours(img2,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)#funcion para encontrar bordes, (copia de la imagen, especiica que sean externos, pueden ser tanto abiertos como cerrados)
+     sorted_ctrs=sorted(ctrs,key=lambda ctr:cv2.boundingRect(ctr)[0])#funcion que dibuja un rectangulo en los bordes que encuentre
+    
+     dataW=[]
+     dataXs=[]
+     dataYs=[]
+    
+     try:
+             for i, ctr in enumerate(sorted_ctrs):#funcion para dibujar todos los bordes o letras que encuentre
+                 
+                         x,y,w,h=cv2.boundingRect(ctr)#especifica coordenadas x, y
+                       
+                         if (h/w)>ratiomin2 and (h/w)<ratiomax2: 
+   
+                            if h<heightstop and h>heightminimum:
+                                                     
+                                 imagen2Predict=cv2.resize(frame[y:y+h, x:x+w],(40,40))
+                                
+                                 imagen2Predict=imagen2Predict/np.amax(imagen2Predict)
+                                 imageP= np.zeros((1,40,40,3))#sacarlo del loop
+                                 imageP[0,:,:,:]=imagen2Predict
+                                 predictions = model2.predict(imageP)
+                                                                            
+                                 confianzamayor=np.argmax(predictions)
+                                 mayor=np.amax(predictions)
+                                
+                                 valorCaracter=directorio[confianzamayor]
+                                        
+                                 if confianzamayor!=13 and mayor>0.9:
+                                       
+                                     dataW.append(w)
+                                     dataXs.append(x)
+                                     dataYs.append(y)
+            
+            
+            
+             medianaW=np.mean(dataW)   
+             meanY=np.median(dataYs)   
+            
+             desviacionX=np.std(dataXs)
+             desviacionY=np.std(dataYs)
+            
+             medianax=np.median(dataXs)
+            
+            
+             x1=int(round(medianax-factordesviacion*desviacionX))
+             x2=int(round(medianax+factordesviacion*desviacionX))
+             y1=int(round(meanY-factordesviacion*desviacionY))
+             y2=int(round(meanY+factordesviacion*desviacionY))
+            
+             dimension=frame.shape
+            
+             if y1<1:
+                 y1=1
+                
+             if y2>dimension[0]:
+                 y2=dimension[0]
+                
+             if x1<1:
+                 x1=1
+                
+             if x2>dimension[1]:
+                 x2=dimension[1]
+                                    
+             dataXs=[]
+             dataYs=[]
+             dataLs=[]
+             dataW=[]
+             dataH=[]
+            
+             for i, ctr in enumerate(sorted_ctrs):#funcion para dibujar todos los bordes o letras que encuentre
+                
+                         x,y,w,h=cv2.boundingRect(ctr)#especifica coordenadas x, y
+                       
+                         if (h/w)>ratiomin2 and (h/w)<ratiomax2 and x>x1 and x<x2 and y>y1 and y<y2:
+                                             
+                                
+                                 if (w/medianaW)>1.3:#Si los numeros estan pegados este es el camino que siguen
+                                    
+                                     sliceNumber=int(round(w/medianaW,0))
+                                     ancho=round(w/sliceNumber)
+                                    
+                                     inicio=x
+                                    
+                                     for i in range(sliceNumber):
+                                   
+            
+                                         imagen2Predict=cv2.resize(frame[y:y+h, inicio:inicio+ancho],(40,40))
+                                    
+                                         imagen2Predict=imagen2Predict/np.amax(imagen2Predict)
+                                         imageP= np.zeros((1,40,40,3))
+                                         imageP[0,:,:,:]=imagen2Predict
+                                         predictions = model2.predict(imageP)                                        
+                                         confianzamayor=np.argmax(predictions)
+                                         mayor=np.amax(predictions)
+ 
+                                        
+                                         valorCaracter=directorio[confianzamayor]
+
+                                        
+                                         if confianzamayor!=13 and mayor>confidence:
+                                            
+                                             bottomLeftCornerOfText = (inicio,y)
+                                             cv2.putText(frame2,valorCaracter, 
+                                             bottomLeftCornerOfText, 
+                                             font2, 
+                                             fontScale2,
+                                             fontColor2,
+                                             lineType2)                       
+                                             dataXs.append(inicio)
+                                             dataYs.append(y)                        
+                                             dataLs.append(valorCaracter)
+                                             dataW.append(ancho)
+                                             dataH.append(h) 
+                                            
+                                         inicio=inicio+ancho
+                                        
+                                 else: #Si los numeros NO estan pegados este es el camino que siguen
+            
+                                    
+                                     imagen2Predict=cv2.resize(frame[y-excesoPixel:y+h+excesoPixel, x-excesoPixel:x+w+excesoPixel],(40,40))
+                                    
+                                     imagen2Predict=imagen2Predict/np.amax(imagen2Predict)
+                                     imageP= np.zeros((1,40,40,3))
+                                     imageP[0,:,:,:]=imagen2Predict
+                                     predictions = model2.predict(imageP)
+                                                                               
+                                     confianzamayor=np.argmax(predictions)
+                                     mayor=np.amax(predictions)  
+                                    
+                                     valorCaracter=directorio[confianzamayor]
+                                    
+                                    
+                                     if confianzamayor!=13 and mayor>confidence:
+                                        
+                                         bottomLeftCornerOfText = (x,y)
+                                         cv2.putText(frame2,valorCaracter, 
+                                         bottomLeftCornerOfText, 
+                                         font2, 
+                                         fontScale2,
+                                         fontColor2,
+                                         lineType2)    
+                                         dataXs.append(x)
+                                         dataYs.append(y)                        
+                                         dataLs.append(valorCaracter)
+                                         dataW.append(w)
+                                         dataH.append(h)   
+
+                                    
+             showtime3=cv2.resize(frame2,(640,480))
+             cv2.imshow("Deteccion Live Window", showtime3)
+                
+     except:
+         a=10
+        
+
+    
