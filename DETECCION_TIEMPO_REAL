@@ -1,0 +1,450 @@
+import cv2
+import numpy as np
+import keras
+import skimage.filters as filters
+from matplotlib import pyplot as plt
+import time
+
+model2 = keras.models.load_model('modelosmodelo_MX60LT8W93TC2_LETRAS_40x40_Acc_968_T_10-09-2019-18-24-13.model') #Poner modelo aqui
+
+cap=cv2.VideoCapture(0)
+
+ratiomin2=0.3
+ratiomax2=3
+excesoPixel=2
+min_size2 =27
+max_size2 = 500
+meanColormax2=150
+meanColormin2=10
+heightstop=40
+heightminimum=20
+confidence=0.1
+font2 = cv2.FONT_HERSHEY_DUPLEX 
+fontScale2 = 0.7
+fontColor2 = (50,255,50)
+lineType2  = 1   
+factordesviacion=3
+directorio={0:"-",1:"0",2:"1",3:"2",4:"3",5:"4",6:"5",7:"6",8:"7",9:"8",
+        10:"9",11:"A",12:"B",13:"@",14:"E",15:"F",16:"L",17:"M",18:"N",19:"P",20:"R",21:"S",22:"V"}
+            
+#imagenPieza1=cv2.imread('C:/Users/e803562/Desktop/3822536-2.jpg')
+#imagenPieza1=cv2.resize(imagenPieza1,(900,600))
+
+#cv2.imshow("Live Detection",cap)  
+#try:
+    
+while True:
+    
+    _, frame = cap.read()
+#    liveshowtime=cv2.resize(frame,(1000,700))
+#    cv2.imshow("Live Image", liveshowtime)
+#    frame=cv2.imread('//Mx60w1008/shared/COMMON/SISTEMA DE VISION EMPAQUE/Carpeta compartida/KERAScesar M/Desktop19.jpg') 
+    
+    frame2=frame.copy()
+    gray=cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+    text_threshold = filters.threshold_local(gray,block_size=21, offset=10) 
+    gray[gray > text_threshold]=0
+    mascara=cv2.inRange(gray,1,255)#binarizador
+                
+    #find all your connected components (white blobs in your image)
+    nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(mascara, connectivity=8)
+    sizes = stats[1:, -1]; 
+    nb_components = nb_components - 1
+    
+    img2 = np.zeros((output.shape))
+    # =============================================================================
+    # Filtros binarios por tamanio
+    # =============================================================================
+    #for every component in the image, you keep it only if it's above min_size
+    for i in range(0, nb_components):
+        if sizes[i] >= min_size2  and sizes[i] <= max_size2:
+           img2[output == i + 1] = 255
+    # =============================================================================
+    # 
+    # =============================================================================
+           
+    img2 = img2.astype(np.uint8)       
+    
+    liveshowtime4=cv2.resize(img2,(1000,700))
+    cv2.imshow("Live Image 4", liveshowtime4)
+    
+    img2,ctrs,hier=cv2.findContours(img2,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)#funcion para encontrar bordes, (copia de la imagen, especiica que sean externos, pueden ser tanto abiertos como cerrados)
+    sorted_ctrs=sorted(ctrs,key=lambda ctr:cv2.boundingRect(ctr)[0])#funcion que dibuja un rectangulo en los bordes que encuentre
+    
+    dataW=[]
+    dataXs=[]
+    dataYs=[]
+    
+    try:
+            for i, ctr in enumerate(sorted_ctrs):#funcion para dibujar todos los bordes o letras que encuentre
+                
+                        x,y,w,h=cv2.boundingRect(ctr)#especifica coordenadas x, y
+                       
+                        if (h/w)>ratiomin2 and (h/w)<ratiomax2: 
+            #               cv2.rectangle(frame2,(x,y),(x+w,y+h),(0,100,0),2)  # rectangulos verdes   
+                           if h<heightstop and h>heightminimum:
+                                                    
+                                imagen2Predict=cv2.resize(frame[y:y+h, x:x+w],(40,40))
+                                
+                                imagen2Predict=imagen2Predict/np.amax(imagen2Predict)
+                                imageP= np.zeros((1,40,40,3))#sacarlo del loop
+                                imageP[0,:,:,:]=imagen2Predict
+                                predictions = model2.predict(imageP)
+                                                                           
+                                confianzamayor=np.argmax(predictions)
+                                mayor=np.amax(predictions)
+                               
+                                valorCaracter=directorio[confianzamayor]
+                                       
+                                if confianzamayor!=13 and mayor>0.9:
+#                                    cv2.rectangle(frame2,(x,y),(x+w,y+h),(0,100,0),2)  # rectangulos verdes                                          
+                                    dataW.append(w)
+                                    dataXs.append(x)
+                                    dataYs.append(y)
+            
+            
+            
+            medianaW=np.mean(dataW)   
+            meanY=np.median(dataYs)   
+            
+            desviacionX=np.std(dataXs)
+            desviacionY=np.std(dataYs)
+            
+            medianax=np.median(dataXs)
+            
+            
+            x1=int(round(medianax-factordesviacion*desviacionX))
+            x2=int(round(medianax+factordesviacion*desviacionX))
+            y1=int(round(meanY-factordesviacion*desviacionY))
+            y2=int(round(meanY+factordesviacion*desviacionY))
+            
+            dimension=frame.shape
+            
+            if y1<1:
+                y1=1
+                
+            if y2>dimension[0]:
+                y2=dimension[0]
+                
+            if x1<1:
+                x1=1
+                
+            if x2>dimension[1]:
+                x2=dimension[1]
+                
+                
+            #cv2.rectangle(frame2,(x1,y1),(x1+(x2-x1),y1+(y2-y1)),(255,255,0),2)   # RECTANGULO AMARILLO                                        
+            dataXs=[]
+            dataYs=[]
+            dataLs=[]
+            dataW=[]
+            dataH=[]
+            
+            for i, ctr in enumerate(sorted_ctrs):#funcion para dibujar todos los bordes o letras que encuentre
+                
+                        x,y,w,h=cv2.boundingRect(ctr)#especifica coordenadas x, y
+                       
+                        if (h/w)>ratiomin2 and (h/w)<ratiomax2 and x>x1 and x<x2 and y>y1 and y<y2:
+                                             
+#                                cv2.rectangle(frame2,(x,y),(x+w,y+h),(0,0,255),2) #DETECCIONES AZULES
+                                
+                                if (w/medianaW)>1.3:#Si los numeros estan pegados este es el camino que siguen
+                                    
+                                    sliceNumber=int(round(w/medianaW,0))
+                                    ancho=round(w/sliceNumber)
+                                    
+                                    inicio=x
+                                    
+                                    for i in range(sliceNumber):
+#                                        cv2.rectangle(frame2,(inicio,y),(inicio+ancho,y+h),(255,100,0),2)   #CORTES NARANJA                                     
+            
+                                        imagen2Predict=cv2.resize(frame[y:y+h, inicio:inicio+ancho],(40,40))
+                                    
+                                        imagen2Predict=imagen2Predict/np.amax(imagen2Predict)
+                                        imageP= np.zeros((1,40,40,3))
+                                        imageP[0,:,:,:]=imagen2Predict
+                                        predictions = model2.predict(imageP)
+            #                            print(predictions)                                          
+                                        confianzamayor=np.argmax(predictions)
+                                        mayor=np.amax(predictions)
+            
+            #                            plt.figure(figsize=(5,10))
+            #                            plt.imshow(imagen2Predict)
+            #                            plt.show()    
+                                        
+                                        valorCaracter=directorio[confianzamayor]
+            #                            print(valorCaracter)
+                                        
+                                        if confianzamayor!=13 and mayor>confidence:
+                                            
+                                            bottomLeftCornerOfText = (inicio,y)
+                                            cv2.putText(frame2,valorCaracter, 
+                                            bottomLeftCornerOfText, 
+                                            font2, 
+                                            fontScale2,
+                                            fontColor2,
+                                            lineType2)                       
+                                            dataXs.append(inicio)
+                                            dataYs.append(y)                        
+                                            dataLs.append(valorCaracter)
+                                            dataW.append(ancho)
+                                            dataH.append(h) 
+                                            
+                                        inicio=inicio+ancho
+                                        
+                                else: #Si los numeros NO estan pegados este es el camino que siguen
+            
+                                    
+                                    imagen2Predict=cv2.resize(frame[y-excesoPixel:y+h+excesoPixel, x-excesoPixel:x+w+excesoPixel],(40,40))
+                                    
+                                    imagen2Predict=imagen2Predict/np.amax(imagen2Predict)
+                                    imageP= np.zeros((1,40,40,3))
+                                    imageP[0,:,:,:]=imagen2Predict
+                                    predictions = model2.predict(imageP)
+                                                                               
+                                    confianzamayor=np.argmax(predictions)
+                                    mayor=np.amax(predictions)  
+                                    
+                                    valorCaracter=directorio[confianzamayor]
+                                    
+            # =============================================================================
+            #  Codigo para checar performance
+            # =============================================================================
+            #                        plt.figure(figsize=(5,10))
+            #                        plt.imshow(imagen2Predict)
+            #                        plt.show()       
+            #                        print(predictions)
+            #                        print(confianzamayor)
+            #                        print(mayor)         
+            #                        print(directorio)
+            #                        print(valorCaracter)
+            # =============================================================================
+                                    
+                                    if confianzamayor!=13 and mayor>confidence:
+                                        
+                                        bottomLeftCornerOfText = (x,y)
+                                        cv2.putText(frame2,valorCaracter, 
+                                        bottomLeftCornerOfText, 
+                                        font2, 
+                                        fontScale2,
+                                        fontColor2,
+                                        lineType2)    
+                                        dataXs.append(x)
+                                        dataYs.append(y)                        
+                                        dataLs.append(valorCaracter)
+                                        dataW.append(w)
+                                        dataH.append(h)   
+            
+
+            
+#            showtime=cv2.resize(frame2,(1400,1100))
+#            cv2.imshow("Mascara", showtime)
+            
+#            lista_entrada = np.array([dataXs,dataYs,dataLs,dataW,dataH])
+#             =============================================================================
+#               Codigo de ordenamiento <-<-<-O->->-> <-<-<-O->->-> <-<-<-O->->->
+#             =============================================================================
+#             =============================================================================
+#               variables de entrada
+##             =============================================================================
+#            lista_entrada=[]
+#            for i in range(len(dataH)):
+#              lista_entrada.append([dataYs[i],dataXs[i],dataLs[i],dataW[i],dataH[i]])
+#            
+#            #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++# =============================================================================
+#            # variables de proceso nesesarias
+#            # =============================================================================
+#            cadena=[]
+#            cadena_aux=""
+#            altura_imagen=480
+#            numero_palabras=0
+#            w_mediana=np.median(dataW)
+#            h_mediana=np.median(dataH)
+#            coordenada_x_marginal=640 # extremo derecho horizontal de la imagen
+#            coordenada_y_marginal=0 #extremo bajo vertical de la imagen
+#            scan=1
+#            find_word=0
+#            guion_extra=0
+#            # =============================================================================
+#            # variables de salida
+#            # =============================================================================
+#            numero_de_serie=''
+#            numero_de_lote=''
+#            numero_de_parte=''
+#            # =============================================================================
+#            #   cambio de rango en y
+#            # =============================================================================
+#            i_1=0
+#            for element in lista_entrada:
+#                lista_entrada[i_1][0]=altura_imagen-lista_entrada[i_1][0]
+#                i_1+=1
+#            # =============================================================================
+#            #   While de escaneo, se acaba cuando acaba de comparar todas la 'supuestas' letras
+#            #   que hay en la imagen
+#            # =============================================================================
+#            # =============================================================================
+#            lista_ordenada_en_x=sorted(lista_entrada, key=lambda x: x[1],reverse=False)
+#            #print(lista_ordenada_en_x)
+##            print(lista_ordenada_en_x)
+#            # =============================================================================
+#            
+#            while(scan==1):
+#                
+#                # =============================================================================
+#                #  ordenar en x de izquierda a derecha
+#                # =============================================================================
+#                lista_ordenada_en_x=sorted(lista_entrada, key=lambda x: x[1],reverse=False)
+#                # =============================================================================
+#                #   si el elemento que esta mas a la izquierda esta en la coordenadas de marginamiento 
+#                #   termina while, por que quiere decir que ya todas las letras fueron escaneadas
+#                # =============================================================================
+#                if (lista_ordenada_en_x[0][0]==coordenada_y_marginal)and(lista_ordenada_en_x[0][1]==coordenada_x_marginal):
+#                    scan=0
+#                    break
+#                # =============================================================================
+#                #   apuntador_generico 1
+#                # =============================================================================
+#                apuntador_generico_1=0
+#                # =============================================================================
+#                #   apuntador_generico 2
+#                # =============================================================================
+#                apuntador_generico_2=1
+#                # =============================================================================
+#                #   entra al while asta que encuentres una palabra
+#                # =============================================================================
+#                find_word=0
+#                while find_word==0:
+#                    # =============================================================================
+#                    #   diferencia absoluta de separacion vertical entre el caracter actual y el futuro
+#                    # =============================================================================
+#                    Dty=abs(lista_ordenada_en_x[apuntador_generico_1][0]-lista_ordenada_en_x[apuntador_generico_2][0])
+#                    # =============================================================================
+#                    #   diferencia absoluta de separacion horizonta entre el caracter actual y el futuro
+#                    # =============================================================================
+#                    Dtx=abs(lista_ordenada_en_x[apuntador_generico_1][1]-lista_ordenada_en_x[apuntador_generico_2][1])
+#                    # =============================================================================
+#                    #   si cumple con la distancia establecida para decir que es una letra de la 
+#                    #   palabra entra en estos 2 if anidados
+#                    # =============================================================================
+#                    if (1.3*lista_ordenada_en_x[apuntador_generico_1][3]<=Dtx<2*lista_ordenada_en_x[apuntador_generico_1][3]):
+#                        lista_ordenada_en_x[apuntador_generico_1][2]+='-'
+#            
+#                    if (0.8*lista_ordenada_en_x[apuntador_generico_1][3]<=Dtx<1.3*lista_ordenada_en_x[apuntador_generico_1][3]):
+#                        if Dty<h_mediana:
+#                            # =============================================================================
+#                            # si cumplio con requerimentos guardalo en cadena      
+#                            # =============================================================================
+#                            cadena_aux+=lista_ordenada_en_x[apuntador_generico_1][2]
+#                            # =============================================================================
+#                            #   como ya usamos ese caracter entonces marginalo, segregalo, separalo del rebaño
+#                            #   de caracteres dandole las coordenadas marginales
+#                            # =============================================================================
+#                            lista_ordenada_en_x[apuntador_generico_1][0]=coordenada_y_marginal
+#                            lista_ordenada_en_x[apuntador_generico_1][1]=coordenada_x_marginal
+#                            # =============================================================================
+#                            #   como ya comparaste la distancia donde apuntaba "apuntador_generico_1" y sabes
+#                            #   con toda seguridad de que el siguiente caracter en la palabra es donde apunta
+#                            #   apuntador_generico_2 ya que se paso el filtro de distancia, ahora debes comparar
+#                            #   lo que hay en apuntador_generico_2 con el siguiente caracter de la lista ordenada
+#                            #   en x, y eso se hace igualando apuntador_generico_1 a apuntador_generico_2
+#                            # =============================================================================
+#                            apuntador_generico_1=apuntador_generico_2
+#                    # =============================================================================
+#                    #   si NO! cumple con la distancia establecida para decir que es una letra de la 
+#                    #   palabra actual entra en este if
+#                    # =============================================================================
+#                    
+#                    if (Dtx>3*lista_ordenada_en_x[apuntador_generico_1][3])or((lista_ordenada_en_x[apuntador_generico_2][0]==coordenada_y_marginal)and(lista_ordenada_en_x[apuntador_generico_2][1]==coordenada_x_marginal)):
+#                        # =============================================================================
+#                        #   si entraste en este if quiere decir que ya se acabo la palabra por que la ultima
+#                        #   diferencia entre distancias (Dtx y Dty) fue mayor a la mediana de lo que se espera
+#                        #   que mida un caracter normal en Weight y High, entonces guarda en cadena el ultimo 
+#                        #   caracter que sabes que esparte de la palabra actual osea el caracter al que esta
+#                        #   apuntando apuntador_generico_1
+#                        # =============================================================================
+#                        cadena_aux+=lista_ordenada_en_x[apuntador_generico_1][2]
+#                        # =============================================================================
+#                        #   como ya usamos ese caracter entonces marginalo, segregalo, separalo del rebaño
+#                        #   de caracteres dandole las coordenadas marginales
+#                        # =============================================================================
+#                        lista_ordenada_en_x[apuntador_generico_1][0]=coordenada_y_marginal
+#                        lista_ordenada_en_x[apuntador_generico_1][1]=coordenada_x_marginal
+#                        cadena.append(cadena_aux)
+#                        cadena_aux=""
+#                        # =============================================================================
+#                        #   sentencias que rompen los ciclos infinitos        
+#                        # =============================================================================
+#                        find_word=1
+#                        #scan=0
+#                    apuntador_generico_2+=1
+#            # =============================================================================
+#            #   el for tenebroso
+#            # =============================================================================
+#            i_ordenar=0
+#            no_tomar_siguiente=0
+#            cantidad_palabras=len(cadena)
+#            cadena_aux=cadena
+#            cadena=[]
+#            for index_c in cadena_aux:
+##                print(index_c)
+#                if (index_c[-1]=='-')and(i_ordenar<(cantidad_palabras-1)):
+#                    cadena.append(index_c+cadena_aux[i_ordenar+1])
+#                    no_tomar_siguiente=1
+#                    
+#                elif (index_c[-1]=='-')and(i_ordenar==(cantidad_palabras-1)):
+#                    cadena.append(index_c[0:-1])
+#                elif (index_c[-1]!='-')and(no_tomar_siguiente==0):
+#                    cadena.append(index_c)
+#                elif (index_c[-1]!='-')and(no_tomar_siguiente==1):
+#                    no_tomar_siguiente=0
+#                i_ordenar+=1
+#                
+#            
+   
+#            iteracion=len(cadena)
+#            suma=0
+#            
+#            for i in range(iteracion):
+#                contador=len(cadena[i])
+#                suma=suma+contador
+#                
+#            if suma>20:
+#                    texto=cadena[0]+cadena[0]+cadena[0]
+#                    print(cadena)
+#
+#                    cv2.putText(frame2,texto, 
+#                    bottomLeftCornerOfText, 
+#                    font2, 
+#                    fontScale2,
+#                    fontColor2,
+#                    lineType2)    
+#                    dataXs.append(x)
+#                    dataYs.append(y)                        
+#                    dataLs.append(valorCaracter)
+#                    dataW.append(w)
+#                    dataH.append(h) 
+                                    
+            showtime3=cv2.resize(frame2,(1500,1300))
+            cv2.imshow("Deteccion Live Window", showtime3)
+                
+    except:
+        a=10
+        
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+       break
+   
+
+                     
+    
+
+#    plt.figure(figsize=(12,12))            
+#    plt.imshow(frame2)
+#    plt.show()  
+#
+#    
+#    tamanio=frame.shape
+
+#except:
+#   print("Error")            
+cap.release()
+cv2.destroyAllWindows()
