@@ -1,0 +1,110 @@
+import cv2
+from keras.models import load_model
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+
+print ('>>>Iniciando carga de modelo...')
+model_1=load_model('CNN_IMPELLERS_20.h7')
+print ('>>>Carga de modelo finalizado...')
+
+cap=cv2.VideoCapture(0)
+
+directorio={0:["PN: 698192-4","698192-4",'698192-4'],1:["PN: 3033053-7","3033053-7","3033053-7"],2:["PN: 3033207-1","3033207-1","3033207-1"],3:["PN: 3616967-1","3616967-1","3616967-1"],
+            4:["PN: 3822249-4","3822249-4","3822249-4"],5:["PN: 3822400-5","3822400-5","3822400-5"],6:["PN: 3822523-003","3822523-003","3822523-003"],7:["PN: 70721597-1","70721597-1","70721597-1"],
+            8:["PN: NA","No sample detected","No sample detected"],9:["PN: LH70027-01","LH70027-01","LH70027-01"]}
+
+directorioDImagenesBase='//Mx60w1008/shared/COMMON/SISTEMA DE VISION EMPAQUE/Fotos de piezas entrenadas para el SV/'
+directorioDHOMs='//Mx60w1008/shared/COMMON/SISTEMA DE VISION EMPAQUE/HOM de piezas entrenadas/'
+directorioAceptable='//Mx60w1008/shared/COMMON/SISTEMA DE VISION EMPAQUE/Fotos de disposiciones/'
+
+tamanioVMain=1200
+tamanioHMain=1800
+
+# tamanio de imagen detectada a mostrar
+vsize=500
+hsize=int(tamanioHMain/2)
+
+imageFrameMain=np.zeros((tamanioVMain,tamanioHMain,3))
+imageFrameMain=np.uint8(imageFrameMain)
+    
+ImageSetImagenesBase= np.zeros((len(directorio),vsize,hsize,3))
+ImageSetHOM= np.zeros((len(directorio),vsize,hsize,3))
+
+imagenAceptable=cv2.imread(directorioAceptable+"Aceptable.jpg")
+imagenAceptable = cv2.resize(imagenAceptable,(hsize,tamanioVMain-vsize))    
+
+imagenNoAceptable=cv2.imread(directorioAceptable+"noAceptable.jpg")
+imagenNoAceptable = cv2.resize(imagenNoAceptable,(hsize,tamanioVMain-vsize))    
+
+imagenNoDetectada=cv2.imread(directorioAceptable+"noDetectada.jpg")
+imagenNoDetectada = cv2.resize(imagenNoDetectada,(hsize,tamanioVMain-vsize))    
+
+
+print ('>>>Iniciando carga de imagenes...')
+for i in directorio:    
+##################Lectura de imagenes de estudio
+    imagenShowDetected=cv2.imread(directorioDImagenesBase+directorio[i][1]+'.jpg')
+    
+#    print(directorioDImagenesBase+directorio[i][1]+'.jpg')
+    
+    imagenShowDetected=cv2.resize(imagenShowDetected,(hsize,vsize))
+    ImageSetImagenesBase[i,:,:,:]=imagenShowDetected
+################# Lectura de HOMS    
+    imagenShowDetected=cv2.imread(directorioDHOMs+directorio[i][2]+'.jpg')
+    imagenShowDetected=cv2.resize(imagenShowDetected,(hsize,vsize))
+    ImageSetHOM[i,:,:,:]=imagenShowDetected
+    
+ImageSet=np.uint8(ImageSetImagenesBase)
+ImageSet2=np.uint8(ImageSetHOM)
+        
+print ('>>>Carga de imagenes finalizado.')
+
+                      
+while True:
+   
+    _, frame = cap.read()
+    
+#    mayor=np.amax(prediccion)  
+    
+    resize = cv2.resize(frame,(100,100))
+    matriz = resize.reshape(1,100,100,3)
+    prediccion = model_1.predict(matriz)                                                                               
+    confianzamayor=np.argmax(prediccion)    
+    valorCaracter=directorio[confianzamayor][0]
+#    print(valorCaracter)
+    
+    imagenTest1= ImageSet[confianzamayor,:,:,:]
+    imagenTest2= ImageSet2[confianzamayor,:,:,:]
+    
+#    imagenDetectada = cv2.resize(imagenTest1,(1000,650)) 
+        
+    imageFrameMain[0:vsize,0:hsize,:]=imagenTest1
+    imageFrameMain[0:vsize,hsize:,:]=imagenTest2
+    
+    resize = cv2.resize(frame,(hsize,tamanioVMain-vsize))    
+    imageFrameMain[vsize:,0:hsize,:]=resize
+
+    if confianzamayor==8:
+      imageFrameMain[vsize:,hsize:,:]=imagenNoDetectada
+    elif confianzamayor==6:        
+      imageFrameMain[vsize:,hsize:,:]=imagenNoAceptable
+    elif confianzamayor==5:        
+      imageFrameMain[vsize:,hsize:,:]=imagenAceptable   
+           
+    font = cv2.FONT_HERSHEY_SIMPLEX  
+    cv2.putText(imageFrameMain, valorCaracter, (5,550), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+
+    cv2.imshow('SISTEMA DE VISION HCMO - IMPELLERS',imageFrameMain)
+    
+#    cv2.imshow('resize',imagenTest1)
+    time.sleep(0.1)
+    
+#    plt.imshow(imagenTest1)
+#    plt.show()
+    
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+    
+cap.release()
+cv2.destroyAllWindows()
